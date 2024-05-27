@@ -66,7 +66,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     try {
       const response = await axios.request(config);
-      // console.log("Response auth", response);
+      console.log("Response auth", response);
       if (response.data.User && response.data.User._id) {
         localStorage.setItem(
           "@name-softphone-zendesk",
