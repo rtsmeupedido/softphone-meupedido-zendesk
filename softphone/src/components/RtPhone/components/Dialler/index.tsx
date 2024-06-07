@@ -23,7 +23,6 @@ import CurrentCall from "../CurrentCall";
 import CallingIn from "../CallingIn";
 
 import CallingOut from "../CallingInOut";
-import { getUsersZendesk } from "../../utils";
 import {
   setPbxExtension,
   setTenantSettings,
@@ -34,9 +33,11 @@ import Home from "../../pages/Home";
 import Conference from "../../pages/Conference/Conference";
 
 import { Button, notification } from "rtk-ux";
+import { Dispatch } from "redux";
+import { setTicket } from "../../features/zendesk";
 
 export default function Dialler() {
-  const { user, organizationsId } = useAuth();
+  const { user, organizationsId, setOriginator } = useAuth();
   const { zafClient } = useZaf();
 
   const dispatch = useAppDispatch();
@@ -44,7 +45,6 @@ export default function Dialler() {
 
   //Calls normais
   const currentCalls = useAppSelector((state) => state.softphone.data);
-  console.log("🚀 ~ Fila Calls:", currentCalls);
 
   //conference
   const conference = useAppSelector((state) => state.softphone.conferenceData);
@@ -63,6 +63,25 @@ export default function Dialler() {
   const callInAudio = new Audio(
     "https://meupedi.do/softphone/audios/calling.mp3"
   );
+  //@ts-ignore
+  const getUsersZendesk = (phone: string) => {
+    return async (dispatch: Dispatch) => {
+      try {
+        const res: any = await zafClient?.request({
+          url: `/api/v2/users/search?query=phone:${phone}`,
+          httpCompleteResponse: true,
+          contentType: "application/json",
+          method: "GET",
+        });
+
+        if (res) {
+          dispatch(setTicket({ users: res?.responseJSON.users }));
+        }
+      } catch (error) {
+        console.error("Failed to fetch users", error);
+      }
+    };
+  };
 
   //Nova função startCall teste
   const startCall = (phone: string) => {
@@ -189,6 +208,9 @@ export default function Dialler() {
       remoteAudio.id = "rt-remote-audio-814";
       remoteAudio.crossOrigin = "anonymous";
       const originator = data.originator;
+      if (originator) {
+        setOriginator(originator);
+      }
       const session: RTCSession = data.session;
 
       // Verifica se tem alguma chamada em andamento.
@@ -199,7 +221,6 @@ export default function Dialler() {
       dispatch(addCall(session));
 
       zafClient?.invoke("popover", "show");
-
       if (originator === "remote" && !activeCall) {
         playAudio();
       }
@@ -215,17 +236,15 @@ export default function Dialler() {
         }
       });
       session.on("accepted", function () {
-        console.log("accepted");
         if (session.direction === "incoming") {
           setNewCall(false);
-          dispatch(getUsersZendesk(session.remote_identity.uri.user));
+
+          dispatch(getUsersZendesk(session?.remote_identity?.uri?.user));
           resetAudio();
         }
         resetAudio();
       });
       session.on("confirmed", function () {
-        console.log("🚀 ~ confirmed:");
-
         if (activeCall) {
           dispatch(setCallHolded({ id: activeCall.id, holded: true }));
           setIsPaused(true);
@@ -241,12 +260,10 @@ export default function Dialler() {
         resetAudio();
       });
       session.on("muted", function () {
-        console.log("🚀 ~ muted:");
         dispatch(setCallMuted({ id: session.id, muted: true }));
         setIsMuted(true);
       });
       session.on("unmuted", function () {
-        console.log("🚀 ~ unmuted:");
         dispatch(setCallMuted({ id: session.id, muted: false }));
         setIsMuted(false);
       });
@@ -261,7 +278,6 @@ export default function Dialler() {
         setIsPaused(false);
       });
       session.on("ended", () => {
-        console.log("🚀 ~ ended:");
         dispatch(removeCall(session.id));
         dispatch(setCallMuted({ id: session.id, muted: false }));
         dispatch(setCallHolded({ id: session.id, holded: false }));
@@ -271,7 +287,6 @@ export default function Dialler() {
         resetAudio();
       });
       session.on("failed", function () {
-        console.log("failed");
         setCalling(false);
         setNewCall(false);
         clearAll();
@@ -294,12 +309,6 @@ export default function Dialler() {
         peerconnection.getReceivers().forEach(function (receiver: any) {
           remoteStream.addTrack(receiver.track);
         });
-      });
-
-      session.on("refer", (e) => {
-        if (session.direction === "incoming") {
-          console.log("refer" + e);
-        }
       });
     });
   }, [pbxServer, currentCalls, conference]);
@@ -348,7 +357,7 @@ export default function Dialler() {
       const response = await getTenantSettingsOrganizationsId(organizationsId);
       setTenantSettingsOrganizationsId(response);
     } catch (error) {
-      console.log("Error TenantSettings", error);
+      return;
     }
   }, [organizationsId]);
 

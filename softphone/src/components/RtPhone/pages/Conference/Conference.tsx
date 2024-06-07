@@ -20,7 +20,6 @@ const Conference = () => {
       if (conference.length > 1) {
         setIsMixing(true);
         try {
-          console.log("Mixando audios...");
           await mixAudioStreams(conference);
         } catch (error) {
           console.error(" Erro ao mixar audios:", error);
@@ -46,7 +45,6 @@ const Conference = () => {
     }
     setIsMixing(true);
     try {
-      console.log("Mixando audios...");
       await mixAudioStreams(conference);
     } catch (error) {
       console.error("Erro ao mixar audios:", error);

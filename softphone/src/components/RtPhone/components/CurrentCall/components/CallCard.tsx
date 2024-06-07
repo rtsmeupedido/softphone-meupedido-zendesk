@@ -129,14 +129,12 @@ const CallCard = ({
 
     const referSubscriber: any = callActive.refer(numberRamal);
 
-    referSubscriber.on("requestSucceeded", (e: any) => {
-      console.log("Pedido de transferência aceito", e.response);
+    referSubscriber.on("requestSucceeded", () => {
       setTransferStatus("Transferência Aceita");
       setProgress(10);
     });
 
-    referSubscriber.on("requestFailed", (e: any) => {
-      console.log("Falha no pedido de transferência", e.response);
+    referSubscriber.on("requestFailed", () => {
       notification.error({
         message: "Erro na Transferência",
         description: "Falha ao tentar realizar a transferência.",
@@ -147,8 +145,7 @@ const CallCard = ({
       setTransferError("Falha ao realizar a transferência");
     });
 
-    referSubscriber.on("accepted", (e: any) => {
-      console.log("Transferência completada com sucesso", e.status_line);
+    referSubscriber.on("accepted", () => {
       setProgress(100);
       setTimeout(() => {
         notification.success({
@@ -163,8 +160,6 @@ const CallCard = ({
     });
 
     referSubscriber.on("failed", (e: any) => {
-      console.log("Notificação de falha recebida", e.status_line);
-
       if (
         e.status_line?.status_code === 503 &&
         e.status_line?.reason_phrase === "Service Unavailable"
@@ -185,8 +180,7 @@ const CallCard = ({
       setTransferStatus("");
     });
 
-    referSubscriber.on("progress", (e: any) => {
-      console.log("Progresso da transferência", e.status_line);
+    referSubscriber.on("progress", () => {
       setTransferStatus("Transferência em progresso...");
       setProgress((prevProgress) =>
         prevProgress + 10 <= 90 ? prevProgress + 10 : 90

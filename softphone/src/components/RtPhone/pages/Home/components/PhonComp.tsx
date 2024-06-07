@@ -1,4 +1,4 @@
-import { ChangeEvent, useState } from "react";
+import { ChangeEvent, KeyboardEvent, useState } from "react";
 import { Input, Row } from "antd";
 import RoundedButton from "../../../components/RoundedButton";
 import { numbers } from "../../../utils";
@@ -15,11 +15,16 @@ export const PhoneComp = ({ sendCall, onChangeNewCall }: PhoneCompProps) => {
 
   function onCall() {
     if (sendCall) {
-      console.log("🚀 ~ onCall");
       sendCall(phone);
       if (onChangeNewCall) {
         onChangeNewCall();
       }
+    }
+  }
+
+  function handleKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key === "Enter") {
+      onCall();
     }
   }
 
@@ -33,6 +38,7 @@ export const PhoneComp = ({ sendCall, onChangeNewCall }: PhoneCompProps) => {
         onChange={(ev: ChangeEvent<HTMLInputElement>) =>
           setPhone(ev.target.value)
         }
+        onKeyDown={handleKeyDown}
         placeholder="Digite o número"
       />
       <Row justify={"center"} className="px-12" gutter={[12, 12]}>

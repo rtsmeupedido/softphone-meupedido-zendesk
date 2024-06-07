@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { Button, Loader, Radio, Spin } from "rtk-ux";
 import CardButtonTicket from "./CardButtonTicket";
-import { getUserTickets } from "../../../utils";
+
 import { format } from "date-fns";
+import { useZaf } from "../../../hooks/useZaf";
 
 interface Props {
   handleBackClick: () => void;
@@ -15,10 +16,39 @@ const CartListTicket = ({ handleBackClick, userId }: Props) => {
   );
   const [isLoading, setIsLoading] = useState(true);
   const [ticket, setTicket] = useState<any[]>([]);
+  const { zafClient } = useZaf();
+
+  const getUserTickets = async (userId: any) => {
+    try {
+      const response: any = await zafClient?.request({
+        url: `/api/v2/users/${userId}/tickets/requested`,
+        httpCompleteResponse: true,
+        contentType: "application/json",
+        method: "GET",
+      });
+
+      if (
+        response?.responseJSON?.tickets &&
+        Array.isArray(response.responseJSON.tickets)
+      ) {
+        return response.responseJSON.tickets;
+      } else {
+        console.error("Erro: Resposta da API não contém 'tickets'.", response);
+        return [];
+      }
+    } catch (error: any) {
+      console.error(
+        "Erro ao buscar tickets:",
+        error.responseText || error.message
+      );
+      return [];
+    }
+  };
 
   useEffect(() => {
     async function fetchTicket() {
       const fetch = await getUserTickets(userId);
+
       setTicket(fetch);
       setIsLoading(false);
     }
@@ -32,7 +62,6 @@ const CartListTicket = ({ handleBackClick, userId }: Props) => {
       </div>
     );
   }
-  // console.log("🚀 ~ CartListTicket ~ selectedTicket:", selectedTicket);
   return (
     <>
       <div className="flex flex-col">

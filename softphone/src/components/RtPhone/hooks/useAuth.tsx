@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import axios from "axios";
 import api from "../api";
+import { useZaf } from "./useZaf";
 
 interface UserType {
   name: string;
@@ -15,6 +16,9 @@ interface AuthContextType {
   error: Error | null;
   token: string | null;
   organizationsId: string | undefined;
+  uri: string | undefined;
+  originator: string;
+  setOriginator: React.Dispatch<React.SetStateAction<string>>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -25,16 +29,23 @@ const AuthContext = createContext<AuthContextType>({
   error: null,
   token: null,
   organizationsId: undefined,
+  uri: undefined,
+  originator: "",
+  setOriginator: () => {},
 });
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<UserType | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
+  const [uri, setUri] = useState<string>("");
   const [error, setError] = useState<Error | null>(null);
   const [organizationsId, setOrganizationsId] = useState<string | undefined>(
     undefined
   );
+  const [originator, setOriginator] = useState<string>("");
+
+  const zafClient = useZaf();
 
   useEffect(() => {
     const savedUser = localStorage.getItem("@name-softphone-zendesk");
@@ -43,46 +54,57 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const getOrganizationsId = localStorage.getItem(
       "@organizations_id-softphone-zendesk"
     );
-    if (savedUser && savedUserId && getToken && getOrganizationsId) {
+    const getUri = localStorage.getItem("@uri-softphone-zendesk");
+    if (savedUser && savedUserId && getToken && getOrganizationsId && getUri) {
       setUser({ name: savedUser, _id: Number(savedUserId) });
       setToken(getToken);
       setOrganizationsId(getOrganizationsId);
+      setUri(getUri);
     }
   }, []);
 
   const login = async (email: string, password: string) => {
     const data = JSON.stringify({ email, password });
     const config = {
-      method: "post",
-      url: "https://api.devel.runtask.com/auth/signin",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      data,
+      url: "https://api.oauth.runtask.com/api/func/get_url_by_zd",
+      type: "POST",
+      contentType: "application/json",
+      data: data,
     };
 
     setLoading(true);
     setError(null);
 
     try {
-      const response = await axios.request(config);
-      console.log("Response auth", response);
-      if (response.data.User && response.data.User._id) {
-        localStorage.setItem(
-          "@name-softphone-zendesk",
-          response.data.User.name
-        );
+      const response: any = await zafClient.zafClient
+        ?.request(config)
+        .then((e) => {
+          return e;
+        })
+        .catch(() => {
+          return;
+        });
+
+      if (response?.User && response?.User._id) {
+        api.defaults.baseURL = response?.uri;
+        api.defaults.headers.common[
+          "Authorization"
+        ] = `Bearer ${response?.Token}`;
+
+        localStorage.setItem("@name-softphone-zendesk", response?.User.name);
         localStorage.setItem(
           "@id-softphone-zendesk",
-          response.data.User._id.toString()
+          response?.User._id.toString()
         );
-        localStorage.setItem("@token-softphone-zendesk", response.data.Token);
+        localStorage.setItem("@token-softphone-zendesk", response?.Token);
         localStorage.setItem(
           "@organizations_id-softphone-zendesk",
-          response.data.User.organizations_id
+          response?.User.organizations_id
         );
-        setUser(response.data.User);
-        setOrganizationsId(response.data.User.organizations_id);
+        localStorage.setItem("@uri-softphone-zendesk", response?.uri);
+        setUri(response?.uri);
+        setUser(response?.User);
+        setOrganizationsId(response?.User.organizations_id);
       } else {
         throw new Error("Invalid response data");
       }
@@ -98,6 +120,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     localStorage.removeItem("@id-softphone-zendesk");
     localStorage.removeItem("@token-softphone-zendesk");
     localStorage.removeItem("@organizations_id-softphone-zendesk");
+    localStorage.removeItem("@uri-softphone-zendesk");
     setUser(null);
     setToken("");
     setOrganizationsId(undefined);
@@ -105,9 +128,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     if (!token) return;
-    // console.log("TOKEN", token);
+
     const interceptor = api.interceptors.request.use(
       (config) => {
+        config.baseURL =
+          localStorage.getItem("@uri-softphone-zendesk") || undefined;
         if (token) {
           config.headers["Authorization"] = `Bearer ${token}`;
         }
@@ -125,7 +150,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <AuthContext.Provider
-      value={{ user, login, logout, loading, error, token, organizationsId }}
+      value={{
+        user,
+        login,
+        logout,
+        loading,
+        error,
+        token,
+        organizationsId,
+        uri,
+        originator,
+        setOriginator,
+      }}
     >
       {children}
     </AuthContext.Provider>

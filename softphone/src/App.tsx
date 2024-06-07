@@ -9,7 +9,6 @@ function App() {
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      console.log("entrou 1000000");
       const zaf = window.ZAFClient.init();
       setZafClient(zaf);
     }

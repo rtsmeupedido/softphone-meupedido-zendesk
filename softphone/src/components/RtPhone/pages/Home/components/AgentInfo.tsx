@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
-import { Button, Flex, Icon, Modal, Progress, Tag } from "rtk-ux";
+import { Flex, Icon, Modal, Progress } from "rtk-ux";
 import { Menu } from "antd";
 import { useAppSelector } from "../../../store/hooks";
 
@@ -15,17 +15,99 @@ import {
 export default function AgentInfo() {
   const pbxServer = useAppSelector((state) => state.session.data);
   const pbxExtension = useAppSelector((state) => state.phone.pbxExtension);
-  const tenantSettings = useAppSelector((state) => state.phone.tenantSettings);
   const user = useAppSelector((state) => state.user.data);
 
+  return (
+    <div>
+      <Flex direction="column" className="gap-2 text-sm">
+        <Flex justify="space-between">
+          Agente:
+          <div className="flex items-center flex-1 justify-end gap-1.5">
+            <Icon
+              width={10}
+              icon={["fas", "circle"]}
+              className={
+                pbxServer?.status === 1 ? "text-green-600" : "text-red-500"
+              }
+            />
+            <div>
+              {pbxExtension?.number} - {user?.name}
+            </div>
+          </div>
+        </Flex>
+        <Flex justify="space-between">
+          E-mail:<div>{user?.Email}</div>
+        </Flex>
+        <Flex align="center" justify="space-between">
+          Status:
+          <AgentStatus />
+        </Flex>
+      </Flex>
+    </div>
+  );
+}
+
+const AgentStatus = () => {
+  const user = useAppSelector((state) => state.user.data);
+  const pbxExtension = useAppSelector((state) => state.phone.pbxExtension);
   const [updateQueueStatus, setUpdateQueueStatus] = useState<boolean>();
   const [queues, setQueues] = useState<any>();
+
+  //---INIT---
+  const init = async () => {
+    if (!user._id) return;
+    await list(
+      "user_queues_softphone",
+      {
+        before_filter: { _id: user._id },
+        custom_filter: [{ $match: { "teams.participants.users": user._id } }],
+      },
+      {},
+      "query"
+    )
+      .then(async ({ data }) => {
+        setQueues(data);
+      })
+      .catch(() => {
+        return;
+      });
+  };
+
+  useEffect(() => {
+    async function fetchGetPbxSettings(organizationsid: string) {
+      const fecth = await getPbxSettings(organizationsid);
+      setUpdateQueueStatus(fecth?.enable_status_agent_update_queue);
+    }
+    fetchGetPbxSettings(user?.organizations_id);
+  }, [user.organizations_id]);
+
+  useEffect(() => {
+    async function fetchGetUserStatus() {
+      const response = await getUserStatus();
+
+      setStatuses(response);
+      const currentStatus = response.find(
+        (status: any) => status._id === user.user_personal_status_id
+      );
+      if (currentStatus) {
+        setSelectedStatus(currentStatus);
+      }
+    }
+    fetchGetUserStatus();
+  }, [user.user_personal_status_id]);
+
+  useEffect(() => {
+    if (user._id) {
+      init();
+    }
+  }, [user._id]);
+
+  const tenantSettings = useAppSelector((state) => state.phone.tenantSettings);
   const [statuses, setStatuses] = useState<any>([]);
   const [selectedStatus, setSelectedStatus] = useState<any>();
   const [modalVisible, setModalVisible] = useState(false);
   const [info, setInfo] = useState<any>("");
   const [progress, setProgress] = useState<any>(0);
-  const [error, setError] = useState<any>(false);
 
   async function sendAsterisk(json: any): Promise<boolean> {
     const config = {
@@ -49,11 +131,9 @@ export default function AgentInfo() {
       }
       return true;
     } catch (error) {
-      console.log(error);
       return false;
     }
   }
-
   const handleChange = async (item: any) => {
     const uniqueOrgs = new Set(
       queues.map((item: any) => item?.organizations_id)
@@ -69,10 +149,8 @@ export default function AgentInfo() {
         : "pause";
 
     if (updateQueueStatus) {
-      console.log("typeEvent", typeEvent);
       switch (typeEvent) {
         case "login":
-          console.log("Entrou aqui login");
           for (const q of uniqueOrgs) {
             sendAsterisk({
               action: "queuelog",
@@ -102,12 +180,8 @@ export default function AgentInfo() {
                 },
               });
               if (!res) {
-                console.log("Erro");
-                setInfo(`Erro ao despausar fila: ${el.name}`);
-                setProgress(((idx + 1) / queues.length) * 100);
                 return;
               } else {
-                console.log("Sucesso");
                 setInfo("");
                 if (progress === 100) {
                   setModalVisible(false);
@@ -118,7 +192,6 @@ export default function AgentInfo() {
           }
           break;
         case "pause": {
-          console.log("Entrou aqui pause");
           for (const q of uniqueOrgs) {
             sendAsterisk({
               action: "queuelog",
@@ -139,15 +212,11 @@ export default function AgentInfo() {
             },
           });
           if (!res) {
-            console.log("Erro");
             return;
-          } else {
-            console.log("Sucesso");
           }
           break;
         }
         case "unpause": {
-          console.log("Entrou aqui unpause");
           for (const q of uniqueOrgs) {
             sendAsterisk({
               action: "queuelog",
@@ -155,7 +224,7 @@ export default function AgentInfo() {
                 Queue: q,
                 Event: "AGENTUNPAUSEALL",
                 Interface: user._id,
-                Message: user.name,
+                Message: user?.name,
               },
             });
           }
@@ -167,19 +236,11 @@ export default function AgentInfo() {
             },
           });
           if (!res) {
-            console.log("Erro", res);
-            setInfo(`Erro ao despausar fila tente novamente`);
-            setError(true);
-            setProgress(10);
-
             return;
-          } else {
-            console.log("Sucesso");
           }
           break;
         }
         case "logoff":
-          console.log("Entrou aqui logoff");
           for (const q of uniqueOrgs) {
             sendAsterisk({
               action: "queuelog",
@@ -210,12 +271,8 @@ export default function AgentInfo() {
                 },
               });
               if (!res) {
-                console.log("Erro");
-                setInfo(`Erro ao deslogar na fila: ${el.name}`);
-                setProgress(((idx + 1) / queues.length) * 100);
                 return;
               } else {
-                console.log("Sucesso");
                 if (progress === 100) {
                   setModalVisible(false);
                 }
@@ -246,7 +303,6 @@ export default function AgentInfo() {
     setModalVisible(false);
     setSelectedStatus(item);
   };
-
   const handleUserQueue = async (value: any, queue: any) => {
     let json = {};
     let sendJson = {};
@@ -297,41 +353,20 @@ export default function AgentInfo() {
     }
     await sendAsterisk(sendJson);
     const result = await sendAsterisk(json);
-    if (result) {
-      console.log("Suceesso");
-    } else {
-      console.log("Erro");
-    }
     return result;
   };
-
-  //---INIT---
-  const init = async () => {
-    if (!user._id) return;
-    await list(
-      "user_queues_softphone",
-      {
-        before_filter: { _id: user._id },
-        custom_filter: [{ $match: { "teams.participants.users": user._id } }],
-      },
-      {},
-      "query"
-    )
-      .then(async ({ data }) => {
-        setQueues(data);
-      })
-      .catch((err) => console.log("erro em list", err));
-  };
-
   const menu = (
     <Menu className="w-60 text-sm border-none">
       {["Disponível", "Ocupado", "Offline"].map((group) => (
-        <Menu.ItemGroup key={group} title={group} className="mb-2">
+        <Menu.ItemGroup
+          key={group}
+          title={<div className="text-slate-800 -ml-3">{group}</div>}
+        >
           {statuses
             .filter((status: any) => status.group === group)
-            .map((status: any) => (
+            .map((status: any, indx: any) => (
               <Menu.Item
-                key={status._id}
+                key={status._id || indx}
                 className={`flex items-center justify-center p-2 m-1 rounded-md font-medium transition-opacity ${
                   status.color === "#FFFFFF" ? "bg-gray-200 text-gray-800" : ""
                 } ${
@@ -372,36 +407,6 @@ export default function AgentInfo() {
       ))}
     </Menu>
   );
-
-  useEffect(() => {
-    async function fetchGetPbxSettings(organizationsid: string) {
-      const fecth = await getPbxSettings(organizationsid);
-      setUpdateQueueStatus(fecth?.enable_status_agent_update_queue);
-    }
-    fetchGetPbxSettings(user?.organizations_id);
-  }, [user.organizations_id]);
-
-  useEffect(() => {
-    async function fetchGetUserStatus() {
-      const response = await getUserStatus();
-
-      setStatuses(response);
-      const currentStatus = response.find(
-        (status: any) => status._id === user.user_personal_status_id
-      );
-      if (currentStatus) {
-        setSelectedStatus(currentStatus);
-      }
-    }
-    fetchGetUserStatus();
-  }, [user.user_personal_status_id]);
-
-  useEffect(() => {
-    if (user._id) {
-      init();
-    }
-  }, [user._id]);
-
   const getButtonBgClass = (status: any) => {
     if (!status) return "bg-gray-100";
     switch (status.group) {
@@ -415,7 +420,6 @@ export default function AgentInfo() {
         return "bg-gray-100";
     }
   };
-
   const getIconColorClass = (status: any) => {
     if (!status) return "#DCDCDC";
     switch (status.group) {
@@ -429,90 +433,45 @@ export default function AgentInfo() {
         return "#DCDCDC";
     }
   };
-
-  function resetInfoQueues() {
-    setError("");
-    setInfo("");
-    setProgress(0);
-    setModalVisible(false);
-  }
-
   const buttonBgClass = getButtonBgClass(selectedStatus);
   const iconColorClass = getIconColorClass(selectedStatus);
 
   return (
-    <div>
-      <div className="w-full">
-        <div className="flex justify-end mb-2 gap-4">
-          <button
-            onClick={() => setModalVisible(true)}
-            className={`flex items-center justify-center px-4 py-2 rounded-full text-sm h-7 w-36 whitespace-nowrap cursor-pointer ${buttonBgClass}`}
-          >
-            <Icon
-              icon={["fal", "user-headset"]}
-              className="mr-2"
-              color={iconColorClass}
-            />
-
-            <span style={{ color: iconColorClass }}>
-              {selectedStatus?.name || "Selecione o Status"}
-            </span>
-
-            <Icon
-              icon={["fas", "caret-down"]}
-              className="ml-2"
-              color={iconColorClass}
-            />
-          </button>
-        </div>
-
-        <Modal
-          title={!info && "Selecione o Status"}
-          open={modalVisible}
-          onOk={() => setModalVisible(false)}
-          onCancel={() => setModalVisible(false)}
-          footer={null}
-          centered={true}
-        >
-          {info && (
-            <div className="h-[500px] w-full left-0 p-2 bg-white rounded flex items-center flex-col justify-center gap-2">
-              <span>{info}</span>
-              <Progress type="circle" percent={progress} />
-
-              {error && (
-                <Button
-                  onClick={resetInfoQueues}
-                  type="primary"
-                  style={{ fontSize: 12 }}
-                >
-                  Voltar
-                </Button>
-              )}
-            </div>
-          )}
-          {!info && menu}
-        </Modal>
-      </div>
-      <Flex direction="column" className="gap-2 text-sm">
-        <Flex justify="space-between">
-          Agente:
-          <div>
-            {pbxExtension?.number} - {user?.name}
+    <div className="w-full">
+      <button
+        onClick={() => setModalVisible(true)}
+        className={`px-2 hover:brightness-95 py-1 flex items-center ml-auto justify-center rounded-md text-sm whitespace-nowrap cursor-pointer ${buttonBgClass}`}
+      >
+        <Icon
+          icon={["far", "user-headset"]}
+          className="mr-2"
+          color={iconColorClass}
+        />
+        <span style={{ color: iconColorClass }}>
+          {selectedStatus?.name || "Selecione o Status"}
+        </span>
+        <Icon
+          icon={["fas", "caret-down"]}
+          className="ml-2"
+          color={iconColorClass}
+        />
+      </button>
+      <Modal
+        title={!info && "Selecione o Status"}
+        open={modalVisible}
+        onOk={() => setModalVisible(false)}
+        onCancel={() => setModalVisible(false)}
+        footer={null}
+        centered={true}
+      >
+        {info && (
+          <div className="h-[500px] w-full left-0 p-2 bg-white rounded flex items-center flex-col justify-center gap-2">
+            <span>{info}</span>
+            <Progress type="circle" percent={progress} />
           </div>
-        </Flex>
-        <Flex justify="space-between">
-          E-mail:<div>{user?.Email}</div>
-        </Flex>
-        <Flex justify="space-between">
-          Status:
-          <Tag
-            style={{ margin: 0 }}
-            color={pbxServer?.status === 1 ? "success" : "error"}
-          >
-            {pbxServer?.status === 1 ? "Online" : "Offline"}
-          </Tag>
-        </Flex>
-      </Flex>
+        )}
+        {!info && menu}
+      </Modal>
     </div>
   );
-}
+};

@@ -6,7 +6,6 @@ function useConference() {
   const [isConferenceActive, setIsConferenceActive] = useState<boolean>(false);
 
   useEffect(() => {
-    // console.log("Atualizando estado da conferência:", isConferenceActive);
     setIsConferenceActive(conference.length > 0);
   }, [conference, isConferenceActive]);
 

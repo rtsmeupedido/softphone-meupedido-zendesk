@@ -1,14 +1,15 @@
 import { Button, Col, Divider, Input, Row } from "rtk-ux";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
 import { ChangeEvent, useState } from "react";
-import { addUsersZendesk } from "../../utils";
 import { useZaf } from "../../hooks/useZaf";
 import CartListTicket from "./components/CartListTicket";
 import CallCard from "./components/CallCard";
+import { appendUser } from "../../features/zendesk";
 
 interface NewContact {
   name: string;
   email: string;
+  phone: string | number;
 }
 
 export default function CurrentCall({
@@ -25,10 +26,35 @@ export default function CurrentCall({
 
   const [showNewUser, setShowNewUser] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
-  const [newContactInfo, setNewContactInfo] = useState<NewContact>({
+  const [newContactInfo, setNewContactInfo] = useState<any>({
     name: "",
     email: "",
   });
+
+  //@ts-ignore
+  const addUsersZendesk = (data: NewContact) => {
+    return async (dispatch: any) => {
+      try {
+        const response = await zafClient?.request({
+          url: `/api/v2/users`,
+          method: "POST",
+          contentType: "application/json",
+          data: JSON.stringify({
+            user: { ...data, role: "end-user" },
+          }),
+          httpCompleteResponse: true,
+        });
+
+        const responseJSON = response?.responseJSON;
+
+        if (responseJSON && responseJSON.user) {
+          dispatch(appendUser(responseJSON.user));
+        }
+      } catch (error: any) {
+        throw new Error(error);
+      }
+    };
+  };
 
   function onAddContact(currentCall: any) {
     if (currentCall?.remote_identity.uri.user) {
@@ -59,7 +85,7 @@ export default function CurrentCall({
           return (
             <div className="">
               <Row
-                key={currentCall.id}
+                key={currentCall?.id || index}
                 gutter={[8, 8]}
                 justify={"center"}
                 className="relative -mx-3"
@@ -83,7 +109,7 @@ export default function CurrentCall({
                     <Col span={24}>
                       <Input
                         onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                          setNewContactInfo((prev) => ({
+                          setNewContactInfo((prev: any) => ({
                             ...prev,
                             name: e.target.value,
                           }))
@@ -94,7 +120,7 @@ export default function CurrentCall({
                     <Col span={24}>
                       <Input
                         onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                          setNewContactInfo((prev) => ({
+                          setNewContactInfo((prev: any) => ({
                             ...prev,
                             email: e.target.value,
                           }))

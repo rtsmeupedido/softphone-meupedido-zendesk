@@ -17,18 +17,13 @@ export const PhonCompDTMF = ({ session }: PhonCompDTMFProps) => {
       duration: duration,
       extraHeaders: ["X-Foo: foo", "X-Bar: bar"],
       eventHandlers: {
-        succeeded: function (e: any) {
-          console.log("DTMF enviado com sucesso:", e);
-        },
-        failed: function (e: any) {
-          console.log("Falha ao enviar DTMF:", e);
-        },
+        succeeded: function () {},
+        failed: function () {},
       },
     };
 
     try {
       session.sendDTMF(tone, options);
-      console.log(`DTMF ${tone} enviado com duração de ${duration} ms`);
     } catch (error) {
       console.error("Erro ao enviar DTMF:", error);
     }

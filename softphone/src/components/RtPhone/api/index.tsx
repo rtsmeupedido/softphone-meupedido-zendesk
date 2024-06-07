@@ -1,7 +1,9 @@
 import axios from "axios";
 
-const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
+const url = localStorage.getItem("@uri-softphone-zendesk") || undefined;
+
+export const api = axios.create({
+  baseURL: url,
 });
 
 // --------------- BEST ACTIONS ------------------
@@ -181,12 +183,10 @@ export const getUserStatus = async () => {
   try {
     const { success, data } = await list("user_status", {}, null, "query");
     if (!success) {
-      console.log("error", data);
       return null;
     }
     return data;
   } catch (err) {
-    console.log("err", err);
     return null;
   }
 };
