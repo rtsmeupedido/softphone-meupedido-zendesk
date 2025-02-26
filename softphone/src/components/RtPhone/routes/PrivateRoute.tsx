@@ -1,18 +1,18 @@
 import NavigationTabs from "../components/Tabs/NavigationTabs";
-import { useAuth } from "../hooks/useAuth";
 import { Navigate } from "react-router-dom";
+import { useAppSelector } from "../store/hooks";
 
 const PrivateRoute = ({ children }: { children: JSX.Element }) => {
-  const { user } = useAuth();
+    const user = useAppSelector((s) => s.user.data);
 
-  return user ? (
-    <>
-      {children}
-      <NavigationTabs />
-    </>
-  ) : (
-    <Navigate to="/" />
-  );
+    return user ? (
+        <>
+            {children}
+            <NavigationTabs />
+        </>
+    ) : (
+        <Navigate to="/" />
+    );
 };
 
 export default PrivateRoute;
