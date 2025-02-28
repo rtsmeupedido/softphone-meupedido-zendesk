@@ -45,6 +45,8 @@ const CallCard = ({ currentCall, startCall, tenantSettingsOrganizationsId }: Cal
     // @ts-ignore
     const [holdedCallId, setHoldedCallId] = useState<string | null>(null);
 
+    const queue = currentCall?._request?.headers?.["X-Queue"]?.[0]?.raw;
+
     const toggleMute = (currentCall: any) => {
         if (currentCall?.muted) {
             currentCall.unmute();
@@ -204,6 +206,7 @@ const CallCard = ({ currentCall, startCall, tenantSettingsOrganizationsId }: Cal
                         <div className="flex flex-col items-center gap-2">
                             {paused ? <div className="text-yellow-600">Ligação pausada</div> : "Ligação em andamento:"}
                             <span className="text-lg font-semibold">{currentCall?.remote_identity.display_name || currentCall?.remote_identity.uri.user || "User not found"}</span>
+                            {queue && <div className="-mt-2">Fila: {queue}</div>}
                             <Tag color={paused ? "gold" : "blue"}>{currentCall?.start_time ? <StopWatch isPaused={paused} datetime={currentCall?.start_time} /> : "00:00"}</Tag>
                         </div>
                     </Col>

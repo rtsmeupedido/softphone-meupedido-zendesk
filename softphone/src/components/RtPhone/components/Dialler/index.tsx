@@ -43,8 +43,8 @@ export default function Dialler() {
     const [loading, setLoading] = useState(false);
     const [tenantSettingsOrganizationsId, setTenantSettingsOrganizationsId] = useState<any>();
 
-    const callAudio = new Audio("https://meupedi.do/softphone/audios/externov4.mp3");
-    const callInAudio = new Audio("https://meupedi.do/softphone/audios/calling.mp3");
+    const callAudio = new Audio("https://www.meupedi.do/softphone/audios/externov4.mp3");
+    const callInAudio = new Audio("https://www.meupedi.do/softphone/audios/calling.mp3");
 
     const getUsersZendesk = (phone: string) => {
         return async (dispatch: Dispatch) => {

@@ -3,6 +3,7 @@ import { useZaf } from "../../../hooks/useZaf";
 import { useAppSelector } from "../../../store/hooks";
 import { format, isValid } from "date-fns";
 import { useAuth } from "../../../hooks/useAuth";
+import { useState } from "react";
 
 interface Props {
     id: number;
@@ -29,6 +30,7 @@ interface TicketInterfaceUpdate {
 }
 
 const CardButtonTicket = ({ disabled, ticketId, id }: Props) => {
+    const [loading, setLoading] = useState(false);
     const { zafClient }: any = useZaf();
     const { originator } = useAuth();
 
@@ -39,7 +41,6 @@ const CardButtonTicket = ({ disabled, ticketId, id }: Props) => {
     const display_name = currentCall[0]?._remote_identity?._display_name;
     const date_and_time = currentCall[0]?._start_time ? new Date(currentCall[0]._start_time) : null;
     const call_id = currentCall[0]._request.headers?.["X-Uniqueid"]?.[0]?.raw || "ID Desconhecido";
-
     const addTicket = async (data: TicketInterface) => {
         const agent = await zafClient?.get("currentUser");
 
@@ -102,7 +103,7 @@ const CardButtonTicket = ({ disabled, ticketId, id }: Props) => {
         }
     };
 
-    const uptadeTicket = async (data: TicketInterfaceUpdate) => {
+    const updateTicket = async (data: TicketInterfaceUpdate) => {
         const agent = await zafClient?.get("currentUser");
         const ticketData = {
             ticket: {
@@ -160,22 +161,26 @@ const CardButtonTicket = ({ disabled, ticketId, id }: Props) => {
     };
 
     async function handleAdcTicket(id: number) {
-        const formattedDate = date_and_time && isValid(date_and_time) ? format(date_and_time, "dd/MM/yyyy HH:mm") : "Data inválida";
-
-        const ticket: any = await addTicket({
-            subject: `Novo ticket: ${id}`,
-            description: "Novo ticket criado através de uma ligação no RT Phone",
-            callDate: formattedDate,
-            originPhoneNumber: user_phone,
-            agentName: display_name ? display_name : user_phone,
-            agentId: user_phone,
-            callCode: call_id,
-        });
-
-        if (ticket && ticket.id) {
-            zafClient?.invoke("routeTo", "ticket", ticket.id);
-        } else {
-            console.error("Erro: Ticket não foi criado corretamente.");
+        try {
+            setLoading(true);
+            const formattedDate = date_and_time && isValid(date_and_time) ? format(date_and_time, "dd/MM/yyyy HH:mm") : "Data inválida";
+            const ticket: any = await addTicket({
+                subject: `Novo ticket: ${id}`,
+                description: "Novo ticket criado através de uma ligação no RT Phone",
+                callDate: formattedDate,
+                originPhoneNumber: user_phone,
+                agentName: display_name ? display_name : user_phone,
+                agentId: user_phone,
+                callCode: call_id,
+            });
+            setLoading(false);
+            if (ticket && ticket.id) {
+                zafClient?.invoke("routeTo", "ticket", ticket.id);
+            } else {
+                console.error("Erro: Ticket não foi criado corretamente.");
+            }
+        } catch (error) {
+            setLoading(false);
         }
     }
 
@@ -183,7 +188,7 @@ const CardButtonTicket = ({ disabled, ticketId, id }: Props) => {
         zafClient?.invoke("routeTo", "ticket", ticketId);
         const formattedDate = date_and_time && isValid(date_and_time) ? format(date_and_time, "dd/MM/yyyy HH:mm") : "Data inválida";
 
-        await uptadeTicket({
+        await updateTicket({
             callDate: formattedDate,
             originPhoneNumber: user_phone,
             agentName: display_name ? display_name : user_phone,
@@ -196,7 +201,7 @@ const CardButtonTicket = ({ disabled, ticketId, id }: Props) => {
         <>
             <Row gutter={[8, 8]} justify={"center"} className="mt-4">
                 <Col span={12}>
-                    <Button block type={"link"} onClick={() => handleAdcTicket(id)}>
+                    <Button block loading={loading} type={"link"} onClick={() => handleAdcTicket(id)}>
                         Novo ticket
                     </Button>
                 </Col>
