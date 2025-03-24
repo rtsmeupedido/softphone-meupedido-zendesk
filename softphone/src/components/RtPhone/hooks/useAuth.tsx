@@ -82,18 +82,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                     return;
                 });
 
-            if (response?.User && response?.User._id) {
-                api.defaults.baseURL = response?.uri;
-                api.defaults.headers.common["Authorization"] = `Bearer ${response?.Token}`;
+            if (response?.data?.User && response?.data?.User._id) {
+                api.defaults.baseURL = response?.data?.uri;
+                api.defaults.headers.common["Authorization"] = `Bearer ${response?.data?.Token}`;
 
-                localStorage.setItem("@name-softphone-zendesk", response?.User.name);
-                localStorage.setItem("@id-softphone-zendesk", response?.User._id.toString());
-                localStorage.setItem("@token-softphone-zendesk", response?.Token);
-                localStorage.setItem("@organizations_id-softphone-zendesk", response?.User.organizations_id);
-                localStorage.setItem("@uri-softphone-zendesk", response?.uri);
-                setUri(response?.uri);
-                dispatch(setUser(response?.User));
-                setOrganizationsId(response?.User.organizations_id);
+                localStorage.setItem("@name-softphone-zendesk", response?.data?.User.name);
+                localStorage.setItem("@id-softphone-zendesk", response?.data?.User._id.toString());
+                localStorage.setItem("@token-softphone-zendesk", response?.data?.Token);
+                localStorage.setItem("@organizations_id-softphone-zendesk", response?.data?.User.organizations_id);
+                localStorage.setItem("@uri-softphone-zendesk", response?.data?.uri);
+                setUri(response?.data?.uri);
+                dispatch(setUser(response?.data?.User));
+                setOrganizationsId(response?.data?.User.organizations_id);
             } else {
                 throw new Error("Invalid response data");
             }
