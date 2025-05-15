@@ -6,11 +6,12 @@ import { ColStyled } from "../../../styles/Dialler";
 import { MuiIcon as Icon } from "rtk-ux";
 
 interface PhoneCompProps {
+    minimized?: boolean;
     sendCall?: (phone: string) => void;
     onChangeNewCall?: () => void;
 }
 
-export const PhoneComp = ({ sendCall, onChangeNewCall }: PhoneCompProps) => {
+export const PhoneComp = ({ sendCall, onChangeNewCall, minimized }: PhoneCompProps) => {
     const [phone, setPhone] = useState("");
 
     function onCall() {
@@ -30,7 +31,15 @@ export const PhoneComp = ({ sendCall, onChangeNewCall }: PhoneCompProps) => {
 
     return (
         <>
-            <Input value={phone} variant="filled" className="text-center mb-4" size="large" onChange={(ev: ChangeEvent<HTMLInputElement>) => setPhone(ev.target.value)} onKeyDown={handleKeyDown} placeholder="Digite o número" />
+            <Input
+                value={phone}
+                variant="filled"
+                className={`text-center ${minimized ? "mb-2" : "mb-4"}`}
+                size="large"
+                onChange={(ev: ChangeEvent<HTMLInputElement>) => setPhone(ev.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Digite o número"
+            />
             <Row justify={"center"} className="px-12 mx-0" gutter={[12, 12]}>
                 {numbers.map((char) => (
                     <ColStyled span={8} key={char}>

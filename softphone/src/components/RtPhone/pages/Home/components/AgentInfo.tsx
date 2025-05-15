@@ -5,12 +5,27 @@ import { Menu } from "antd";
 import { useAppSelector } from "../../../store/hooks";
 import { create, getPbxSettings, getUserStatus, list, update } from "../../../api";
 
-export default function AgentInfo() {
+export default function AgentInfo({ minimized }: { minimized?: boolean }) {
     const pbxServer = useAppSelector((state) => state.session.data);
     const pbxExtension = useAppSelector((state) => state.phone.pbxExtension);
     const user = useAppSelector((state) => state.user.data);
 
-    return (
+    return minimized ? (
+        <div>
+            <Flex direction="column" className="gap-2 text-sm">
+                <div className="flex items-center flex-1 gap-1.5">
+                    <Icon width={10} icon={["mui", "circle"]} className={pbxServer?.status === 1 ? "text-green-600" : "text-red-500"} />
+                    <div className="flex flex-col">
+                        <span className="text-slate-800">
+                            {pbxExtension?.number} - {user?.name}
+                        </span>
+                        <span className="text-slate-500 text-xs">{user?.Email}</span>
+                    </div>
+                    <AgentStatus minimal={true} />
+                </div>
+            </Flex>
+        </div>
+    ) : (
         <div>
             <Flex direction="column" className="gap-2 text-sm">
                 <Flex justify="space-between">
@@ -34,7 +49,7 @@ export default function AgentInfo() {
     );
 }
 
-const AgentStatus = () => {
+const AgentStatus = ({ minimal }: { minimal?: boolean }) => {
     const user = useAppSelector((state) => state.user.data);
     const pbxExtension = useAppSelector((state) => state.phone.pbxExtension);
     const [updateQueueStatus, setUpdateQueueStatus] = useState<boolean>();
@@ -389,10 +404,10 @@ const AgentStatus = () => {
     const iconColorClass = getIconColorClass(selectedStatus);
 
     return (
-        <div className="w-full">
-            <button onClick={() => setModalVisible(true)} className={`px-2 hover:brightness-95 py-1 flex items-center ml-auto justify-center rounded-md text-sm whitespace-nowrap cursor-pointer ${buttonBgClass}`}>
-                <Icon icon={["mui", "support_agent"]} className="mr-2" color={iconColorClass} />
-                <span style={{ color: iconColorClass }}>{selectedStatus?.name || "Selecione o Status"}</span>
+        <div className={minimal ? "ml-auto" : "w-full"}>
+            <button onClick={() => setModalVisible(true)} className={`px-2 hover:brightness-95 py-1 flex items-center ml-auto justify-center rounded-md whitespace-nowrap cursor-pointer ${buttonBgClass} ${minimal ? "text-xs" : "text-sm"}`}>
+                <Icon icon={["mui", "support_agent"]} className="mr-2" color={iconColorClass} width={minimal ? 10 : undefined} />
+                <span style={{ color: iconColorClass }}>{selectedStatus?.name || minimal ? "Status" : "Selecione o Status"}</span>
             </button>
             <Modal title={!info && "Selecione o Status"} open={modalVisible} onOk={() => setModalVisible(false)} onCancel={() => setModalVisible(false)} footer={null} centered={true}>
                 {info && (

@@ -354,7 +354,6 @@ export default function Dialler() {
                             <CurrentCall currentCalls={currentCalls} isPaused={isPaused} isMuted={isMuted} startCall={startCall} tenantSettingsOrganizationsId={tenantSettingsOrganizationsId} />
                         </>
                     )}
-
                     {showHome && <Home sendCall={startCall} />}
                 </Container>
             )}

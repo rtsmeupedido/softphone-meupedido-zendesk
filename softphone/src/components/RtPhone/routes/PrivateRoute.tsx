@@ -7,7 +7,9 @@ const PrivateRoute = ({ children }: { children: JSX.Element }) => {
 
     return user ? (
         <>
-            {children}
+            <div style={{ overflow: "auto", height: "calc(100% - 52px)" }} className="p-4">
+                {children}
+            </div>
             <NavigationTabs />
         </>
     ) : (
